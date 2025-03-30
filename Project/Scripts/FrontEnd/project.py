@@ -1,9 +1,25 @@
+import sqlite3
 import customtkinter
 import tkinter as tk
 from config import TAMANHO, TITLE
-from images import ICON, ImageAlunoBase
+from images import ICON, ImageAlunoBase, Add
 from PIL import Image, ImageTk
-from tkinter import filedialog 
+from tkinter import filedialog
+
+# Criar ou conectar ao banco de dados
+conn = sqlite3.connect("alunos.db")
+c = conn.cursor()
+
+# Criar tabela se não existir
+c.execute('''CREATE TABLE IF NOT EXISTS alunos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                nome TEXT,
+                idade INTEGER,
+                sexo TEXT,
+                classe TEXT,
+                imagem TEXT
+            )''')
+conn.commit()
 
 # =============CLASS APP======================
 
@@ -25,20 +41,36 @@ class App(customtkinter.CTk):
 #==============LABELS=====================
 
     def labels(self):
-      # CLasses que temos!
+      # Classes que temos!
         Classes = ['1 ano', '2 ano', '3 ano', '4 ano', '5 ano']
         
-      # Função para armazenar o texto
 
-#===============SALVAR TEXTO==================== 
+#===============SALVAR NO BANCO DE DADOS E LISTAR==================== 
 
-        def salvar_texto():
-            global textoIdade
-            global textoNome
-            textoIdade = txtIdadeAluno.get("1.0", "end").strip()
-            textoNome = txtBoxAluno.get("1.0", "end").strip()
-            print(textoIdade, textoNome)
-      
+        def salvar_aluno():
+          nome = txtBoxAluno.get("1.0", "end").strip()
+          idade = txtIdadeAluno.get("1.0", "end").strip()
+          sexo = CheckBoxSexo.get()
+          classe = CheckBoxClasse.get()
+        
+          if nome and idade:
+            conn = sqlite3.connect("alunos.db")
+            c = conn.cursor()
+            c.execute("INSERT INTO alunos (nome, idade, sexo, classe) VALUES (?, ?, ?, ?)", (nome, idade, sexo, classe))
+            conn.commit()
+            conn.close()
+            print("Aluno cadastrado com sucesso!")
+
+        def listar_alunos():
+          conn = sqlite3.connect("alunos.db")
+          c = conn.cursor()
+          c.execute("SELECT * FROM alunos")
+          alunos = c.fetchall()
+          conn.close()
+          print("Lista de Alunos:")
+          for aluno in alunos:
+            print(aluno)
+
       #LETREIROS
 
          # Master do letreiro
@@ -71,8 +103,8 @@ class App(customtkinter.CTk):
         txtIdadeAluno.pack(pady=25, padx=10)
 
          # botão de adcionar aluno no Banco de Dados
-        ButtonAddAluno = customtkinter.CTkButton(master=MasterLetreiro, width=55, height=25, text='Adcionar Aluno', command=salvar_texto)
-        ButtonAddAluno.pack()
+        self.ButtonAddAluno = customtkinter.CTkButton(master=MasterLetreiro, width=55, height=25, text='Adcionar Aluno', command=salvar_aluno, image=Add)
+        self.ButtonAddAluno.pack()
 
          # box 1
         CheckBoxSexo = customtkinter.CTkOptionMenu(master=MasterInfosAluno, values=["Masculino", "Feminino"])
@@ -85,6 +117,11 @@ class App(customtkinter.CTk):
          # Image Aluno
         self.ImageAluno = customtkinter.CTkLabel(self, text=None, image=(ImageAlunoBase))
         self.ImageAluno.place(x=349, y=100)
+
+         # Listar alunos
+        self.btn_listar = customtkinter.CTkButton(MasterLetreiro, width=55, height=25, text="Listar Alunos", command=listar_alunos)
+        self.btn_listar.pack()
+        self.btn_listar.place(x=235, y=44)
 
 #================LOAD DE IMAGENS=================
 
@@ -117,6 +154,9 @@ class App(customtkinter.CTk):
         # Frame da Chamada
         MasterChamadas = customtkinter.CTkFrame(self, width=320, height=500)
         MasterChamadas.place(x=550, y=50)
+
+        LabelTextChamada = customtkinter.CTkLabel(master=MasterChamadas, text='Chamada', bg_color='transparent', text_color='white')
+        LabelTextChamada.place(x=130, y=-7)
 
         #Checkbox da Classe 
         CheckBoxClasseChamada = customtkinter.CTkOptionMenu(master=MasterChamadas, values=[Classes[0], Classes[1], Classes[2], Classes[3], Classes[4]])
